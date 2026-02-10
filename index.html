@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Landscape Timer</title>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      height: 100vh;
+      width: 100vw;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-family: Arial, sans-serif;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-image 0.5s ease;
+    }
+
+    #clock-container { padding: 20px; border-radius: 10px; }
+
+    .icon-btn {
+      position: fixed;
+      bottom: 20px;
+      width: 40px;
+      height: 40px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+    }
+
+    #settings-btn { right: 20px; }
+    #refresh-bg-btn { right: 70px; }
+
+    #settings-panel {
+      position: fixed;
+      bottom: 70px;
+      right: 20px;
+      width: 260px;
+      background: rgba(0,0,0,0.8);
+      padding: 15px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    label { display: block; margin-top: 10px; font-size: 14px; }
+    select, input {
+      width: 100%; margin-top: 5px; padding: 5px;
+      border-radius: 5px; border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Horloge -->
+  <div id="clock-container">
+    <iframe id="clock"
+      scrolling="no"
+      frameborder="no"
+      style="overflow:hidden;border:0;margin:0;padding:0;width:227px;height:75px;"
+      src="https://www.clocklink.com/html5embed.php?clock=008&timezone=France_Paris&color=black&size=227">
+    </iframe>
+  </div>
+
+  <!-- Boutons icônes -->
+  <div id="refresh-bg-btn" class="icon-btn">🔄</div>
+  <div id="settings-btn" class="icon-btn">⚙</div>
+
+  <!-- Panneau paramètres -->
+  <div id="settings-panel">
+
+    <label>Style d'horloge</label>
+    <select id="clockstyle"></select>
+
+    <label>Taille</label>
+    <input type="number" id="size" value="100">
+
+    <label>Fuseau horaire</label>
+    <select id="timezone">
+      <option value="France_Paris">France / Paris</option>
+      <option value="UTC">UTC</option>
+      <option value="US_Pacific">US / Pacific</option>
+      <option value="Asia_Tokyo">Tokyo</option>
+    </select>
+
+    <label>Couleur</label>
+    <select id="color"></select>
+
+    <button id="apply" style="margin-top:15px;width:100%;padding:8px;border-radius:5px;border:none;background:white;color:black;cursor:pointer;">
+      Appliquer
+    </button>
+  </div>
+
+  <script>
+    /* ---------------------------------------------------------
+       SOURCES D'IMAGES
+       --------------------------------------------------------- */
+    const SOURCES = [
+      "https://www.sourcesplash.com/i/random?q=nature",
+      "https://www.sourcesplash.com/i/random?q=ocean",
+      "https://www.sourcesplash.com/i/random?q=mountains",
+      "https://www.sourcesplash.com/i/random?q=forest"
+    ];
+
+    /* ---------------------------------------------------------
+       FONCTION : Charger une image valide (paysage)
+       --------------------------------------------------------- */
+    function loadValidBackground(attempt = 0) {
+      if (attempt > 10) return; // sécurité anti-boucle
+
+      const src = SOURCES[Math.floor(Math.random() * SOURCES.length)] + "&cache=" + Date.now();
+
+      const img = new Image();
+      img.src = src;
+
+      img.onload = () => {
+        if (img.width > img.height) {
+          document.body.style.backgroundImage = `url('${src}')`;
+        } else {
+          loadValidBackground(attempt + 1);
+        }
+      };
+
+      img.onerror = () => loadValidBackground(attempt + 1);
+    }
+
+    loadValidBackground();
+
+    /* ---------------------------------------------------------
+       Rafraîchir toutes les minutes
+       --------------------------------------------------------- */
+    setInterval(loadValidBackground, 60000);
+
+    /* ---------------------------------------------------------
+       Bouton pour changer l'image immédiatement
+       --------------------------------------------------------- */
+    document.getElementById("refresh-bg-btn").onclick = loadValidBackground;
+
+    /* ---------------------------------------------------------
+       JSON HORLOGES
+       --------------------------------------------------------- */
+    const CLOCK_DATA = {
+      "008": { baseSize: "227x75", colors: ["black","white","blue","red","orange","green","pink","gray"] },
+      "004": { baseSize: "240x80", colors: ["black","white","green","red","orange","gray","purple","pink","yellow"] },
+      "043": { baseSize: "240x80", colors: ["black","yellow","white","red","green","orange","gray","purple","pink","blue"] },
+      "047": { baseSize: "380x80", colors: ["white","red","black","orange","blue","pink","green","purple","gray"] },
+      "036": { baseSize: "570x75", colors: ["white","red","black","orange","blue","pink","green","purple","gray"] }
+    };
+
+    /* ---------------------------------------------------------
+       Remplissage des listes
+       --------------------------------------------------------- */
+    const styleSelect = document.getElementById("clockstyle");
+    const colorSelect = document.getElementById("color");
+    const clock = document.getElementById("clock");
+
+    for (const style in CLOCK_DATA) {
+      const opt = document.createElement("option");
+      opt.value = style;
+      opt.textContent = "Style " + style;
+      styleSelect.appendChild(opt);
+    }
+
+    function updateColors() {
+      const style = styleSelect.value;
+      const colors = CLOCK_DATA[style].colors;
+
+      colorSelect.innerHTML = "";
+      colors.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        colorSelect.appendChild(opt);
+      });
+    }
+
+    styleSelect.onchange = updateColors;
+    updateColors();
+
+    /* ---------------------------------------------------------
+       Appliquer les paramètres horloge
+       --------------------------------------------------------- */
+    document.getElementById("apply").onclick = () => {
+      const style = styleSelect.value;
+      const timezone = document.getElementById("timezone").value;
+      const color = colorSelect.value;
+
+      const userSize = Number(document.getElementById("size").value);
+      const multiplier = userSize / 100;
+
+      const [baseW, baseH] = CLOCK_DATA[style].baseSize.split("x").map(Number);
+
+      const w = Math.round(baseW * multiplier);
+      const h = Math.round(baseH * multiplier);
+
+      const url =
+        `https://www.clocklink.com/html5embed.php?clock=${style}&timezone=${timezone}&color=${color}&size=${w}`;
+
+      clock.src = url;
+      clock.style.width = w + "px";
+      clock.style.height = h + "px";
+    };
+
+    /* ---------------------------------------------------------
+       Bouton paramètres
+       --------------------------------------------------------- */
+    const panel = document.getElementById("settings-panel");
+    document.getElementById("settings-btn").onclick = () => {
+      panel.style.display = panel.style.display === "none" ? "block" : "none";
+    };
+  </script>
+
+</body>
+</html>
